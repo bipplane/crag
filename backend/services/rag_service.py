@@ -77,5 +77,6 @@ def query_module_content(tenant_id: str, module_id: str, query_str: str):
     
     # Execute RAG pipeline
     response = query_engine.query(query_str)
-    
+    if response is None or str(response) == "Empty Response":
+        return ("No relevant information found for the given query. Try double checking the tenant/module ID.")
     return str(response)
