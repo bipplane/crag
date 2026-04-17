@@ -1,21 +1,37 @@
-from llama_index.core import VectorStoreIndex, Document, Settings
+import os
+from pinecone import Pinecone
+from llama_index.core import VectorStoreIndex, Document, Settings, StorageContext
 from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
-from llama_index.llms.gemini import Gemini
-from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.vector_stores.pinecone import PineconeVectorStore
 
-# Replace OpenAI with Gemini (default reads from GOOGLE_API_KEY environment variable)
-Settings.llm = Gemini(model="models/gemini-3.1-flash-lite-preview")
-Settings.embed_model = GeminiEmbedding(model_name="models/gemini-embedding-2-preview")
+Settings.llm = GoogleGenAI(model="gemini-3.1-flash-lite-preview")
+Settings.embed_model = GoogleGenAIEmbedding(model_name="gemini-embedding-2-preview")
 
-# Using a global dictionary-based index for quick prototyping.
-# In production, this will be swapped to Pinecone as specified in agent.md.
-_global_index = None
+# Connect to the remote Pinecone database
+_pinecone_index_instance = None
 
 def get_index():
-    global _global_index
-    if _global_index is None:
-        _global_index = VectorStoreIndex.from_documents([])
-    return _global_index
+    global _pinecone_index_instance
+    if _pinecone_index_instance is None:
+        index_name = os.getenv("PINECONE_INDEX_NAME")
+        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+        
+        # Connect to your specific index
+        pinecone_index = pc.Index("crag")
+        
+        # Bind LlamaIndex to Pinecone
+        vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        
+        # Initialize global reference for usage later
+        _pinecone_index_instance = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            storage_context=storage_context
+        )
+        
+    return _pinecone_index_instance
 
 def ingest_module_content(tenant_id: str, module_id: str, text_content: str):
     """

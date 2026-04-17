@@ -40,8 +40,8 @@ the group made. we both have a mutual understanding that we only have each other
 and if we crumble, so does the rest of our group. we took everything upon ourselves to do all the module's objectives. but there's really only so much that the 2 of us could do. it was a miracle that we managed to get full points on the obstacle course. however, we really could not take up the responsibility for the video due to the robot and video taking such a huge toll on us.
 """
 
-tenant = "evaluator_1"
-module = "group_4_review"
+tenant = "ryanc"
+module = "cs2030s"
 
 print("Ingesting document...")
 ingest_result = ingest_module_content(tenant, module, test_document)
