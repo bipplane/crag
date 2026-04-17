@@ -3,8 +3,8 @@ import { Upload, Search, FileText } from 'lucide-react';
 import './index.css';
 
 function App() {
-  const [tenantId, setTenantId] = useState('professor-smith');
-  const [moduleId, setModuleId] = useState('chapter-1-biology');
+  const [tenantId, setTenantId] = useState('ryanc');
+  const [moduleId, setModuleId] = useState('cs2030s');
   
   // Upload State
   const [file, setFile] = useState<File | null>(null);
