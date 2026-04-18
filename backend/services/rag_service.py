@@ -85,7 +85,22 @@ def query_module_content(tenant_id: str, module_id: str, query_str: str):
     )
     
     # Execute RAG pipeline
-    response = query_engine.query(query_str)
+    try:
+        response = query_engine.query(query_str)
+    except Exception as e:
+        if "503" in str(e) or "UNAVAILABLE" in str(e):
+            print("503 encountered, falling back to gemini-2.5-flash-lite...")
+            from llama_index.llms.google_genai import GoogleGenAI
+            fallback_llm = GoogleGenAI(model="gemini-2.5-flash-lite")
+            query_engine = index.as_query_engine(
+                similarity_top_k=3,
+                filters=filters,
+                llm=fallback_llm
+            )
+            response = query_engine.query(query_str)
+        else:
+            raise e
+
     if response is None or str(response) == "Empty Response":
         return ("No relevant information found for the given query. Try double checking tenant/module ID.")
     return str(response)
