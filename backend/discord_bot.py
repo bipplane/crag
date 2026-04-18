@@ -3,6 +3,7 @@ import discord
 import asyncio
 from dotenv import load_dotenv
 from services.rag_service import query_module_content
+from services.adk_service import generate_course_summary
 
 # Load environment variables for Discord and Pinecone/GenAI
 load_dotenv('.env')
@@ -36,16 +37,36 @@ class CRAGBot(discord.Client):
             tenant_id = "ryanc"     # e.g., str(message.guild.id)
             module_id = "cs2030s" 
             
+            # Simple keyword-based intent classification
+            # If the user asks for a summary or comprehensive guide, use ADK Orchestration
+            summary_keywords = ["summarize", "summarise", "summary", "study guide", "comprehensive review"]
+            intent = "summary" if any(kw in question.lower() for kw in summary_keywords) else "qa"
+            
             try:
                 # Provide a typing indicator while processing the query
                 async with message.channel.typing():
-                    response = await asyncio.to_thread(
-                        query_module_content, 
-                        tenant_id, 
-                        module_id, 
-                        question
-                    )
-                await message.reply(str(response))
+                    if intent == "summary":
+                        # Send acknowledgment first
+                        await message.reply(f"⏳ Thanks for the request! I'm synthesizing a comprehensive guide asynchronously. I will ping you when it's done.")
+                        
+                        # Process the heavy workload asynchronously using asyncio instead of Celery/Redis
+                        response = await asyncio.to_thread(
+                            generate_course_summary, 
+                            tenant_id, 
+                            module_id, 
+                            question
+                        )
+                        # Reply with the completed summary
+                        await message.reply(f"✅ <@{message.author.id}>, your asynchronous task is complete!\n\n> {response['summary']}")
+                    else:
+                        # Synchronous Low-Latency LlamaIndex RAG Pipeline  
+                        response = await asyncio.to_thread(
+                            query_module_content, 
+                            tenant_id, 
+                            module_id, 
+                            question
+                        )
+                        await message.reply(str(response))
             except Exception as e:
                 print(f"Error handling Discord message: {e}")
                 await message.reply("Oops, something went wrong while searching the database.")
