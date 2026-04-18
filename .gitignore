@@ -10,7 +10,7 @@ agent.md
 # IDEs and Editors
 # =========================
 .vscode/*
-!.vscode/settings.json
+.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -93,3 +93,11 @@ storage/
 *.pdf
 *.txt
 *.csv
+
+# =========================
+# Database & Docker
+# =========================
+crag.session.sql
+*.session.sql
+pgdata/
+docker-compose.override.yml
