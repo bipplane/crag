@@ -5,6 +5,9 @@ from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.vector_stores.pinecone import PineconeVectorStore
+from dotenv import load_dotenv
+
+load_dotenv()
 
 Settings.llm = GoogleGenAI(model="gemini-3.1-flash-lite-preview")
 Settings.embed_model = GoogleGenAIEmbedding(model_name="gemini-embedding-2-preview")
@@ -78,5 +81,5 @@ def query_module_content(tenant_id: str, module_id: str, query_str: str):
     # Execute RAG pipeline
     response = query_engine.query(query_str)
     if response is None or str(response) == "Empty Response":
-        return ("No relevant information found for the given query. Try double checking the tenant/module ID.")
+        return ("No relevant information found for the given query. Try double checking tenant/module ID.")
     return str(response)
