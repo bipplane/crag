@@ -11,6 +11,7 @@ load_dotenv()
 
 # Import our new RAG service
 from services.rag_service import ingest_module_content, query_module_content
+from services.adk_service import generate_course_summary
 
 app = FastAPI(title="CRAG Backend", description="Backend for Educational RAG System")
 
@@ -27,6 +28,7 @@ class ModuleQueryRequest(BaseModel):
     tenant_id: str
     module_id: str
     query: str
+    intent: str = "qa" # "qa" for synchronous RAG, "summary" for asynchronous ADK
 
 @app.get("/")
 def health_check():
@@ -60,14 +62,30 @@ async def test_rag_ingest(
         result = ingest_module_content(tenant_id, module_id, text_content)
         return {"status": "success", "filename": file.filename, "result": result}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/rag/query")
 def test_rag_query(request: ModuleQueryRequest):
-    """Retrieves answers constrained to a specific module and educator tenant ID."""
+    """
+    Routes responses based on intent:
+    - "qa": Returns a synchronous response via the baseline LlamaIndex RAG pipeline.
+    - "summary": Dispatches an asynchronous celery task to an ADK microservice for heavy processing.
+    """
     if not os.getenv("GOOGLE_API_KEY"):
         raise HTTPException(status_code=500, detail="GOOGLE_API_KEY environment variable not found.")
+
+    if request.intent == "summary":
+        # Dispatch the compute-heavy synthesis to our isolated ADK microservice
+        task = generate_course_summary.delay(request.tenant_id, request.module_id, request.query)
+        return {
+            "status": "accepted",
+            "task_id": task.id,
+            "message": "Summary generation triggered. You will be notified asynchronously."
+        }
         
+    # Default QA intent falls back to core pipeline
     answer = query_module_content(request.tenant_id, request.module_id, request.query)
     return {"answer": answer}
 
