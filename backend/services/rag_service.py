@@ -1,10 +1,10 @@
 import os
-from pinecone import Pinecone
 from llama_index.core import VectorStoreIndex, Document, Settings, StorageContext
 from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
-from llama_index.vector_stores.pinecone import PineconeVectorStore
+from llama_index.vector_stores.postgres import PGVectorStore
+from sqlalchemy import make_url
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,29 +12,35 @@ load_dotenv()
 Settings.llm = GoogleGenAI(model="gemini-3.1-flash-lite-preview")
 Settings.embed_model = GoogleGenAIEmbedding(model_name="gemini-embedding-2-preview")
 
-# Connect to the remote Pinecone database
-_pinecone_index_instance = None
+# Connect to Postgres database
+_pg_index_instance = None
 
 def get_index():
-    global _pinecone_index_instance
-    if _pinecone_index_instance is None:
-        index_name = os.getenv("PINECONE_INDEX_NAME")
-        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    global _pg_index_instance
+    if _pg_index_instance is None:
+        # Provide a default connection string assuming a local postgres instance 
+        db_url = os.getenv("PG_CONNECTION_STRING", "postgresql://postgres:password@localhost:5433/crag_db")
+        url = make_url(db_url)
         
-        # Connect to your specific index
-        pinecone_index = pc.Index("crag")
-        
-        # Bind LlamaIndex to Pinecone
-        vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+        # Bind LlamaIndex to Postgres with pgvector
+        vector_store = PGVectorStore.from_params(
+            database=url.database,
+            host=url.host,
+            password=url.password,
+            port=url.port,
+            user=url.username,
+            table_name="course_embeddings",
+            embed_dim=3072
+        )
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         
         # Initialize global reference for usage later
-        _pinecone_index_instance = VectorStoreIndex.from_vector_store(
+        _pg_index_instance = VectorStoreIndex.from_vector_store(
             vector_store=vector_store,
             storage_context=storage_context
         )
         
-    return _pinecone_index_instance
+    return _pg_index_instance
 
 def ingest_module_content(tenant_id: str, module_id: str, text_content: str):
     """

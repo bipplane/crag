@@ -5,11 +5,21 @@ This project is a decoupled microservices application designed for scalable mach
 ## Prerequisites
 * **Node.js** (v18+)
 * **Python** (3.10+)
+* **Docker Desktop** (for PostgreSQL + pgvector)
 * A **Google Gemini API Key** (for the LLM & Embeddings)
 
 ---
 
-## 1. Running the Backend (FastAPI + LlamaIndex)
+## 1. Running the Database (PostgreSQL + pgvector)
+
+We use PostgreSQL with the `pgvector` extension to store our multi-tenant document embeddings.
+
+1. **Start the database container:**
+   ```bash
+   docker run --name crag-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=crag_db -p 5433:5432 -d pgvector/pgvector:pg16
+   ```
+
+## 2. Running the Backend (FastAPI + LlamaIndex)
 
 The backend handles the RAG ingestion, querying, and LLM processing.
 
@@ -31,15 +41,15 @@ The backend handles the RAG ingestion, querying, and LLM processing.
      ```
 
 3. **Install dependencies:**
-   *(If you haven't already, the environment is pre-configured with requirements in the previous steps)*
    ```bash
-   pip install fastapi uvicorn celery redis psycopg2-binary SQLAlchemy pydantic llama-index llama-parse openai-whisper pylti1p3 python-multipart python-jose[cryptography] python-dotenv llama-index-llms-gemini llama-index-embeddings-gemini
+   pip install fastapi uvicorn celery redis psycopg2-binary asyncpg SQLAlchemy pydantic llama-index llama-index-vector-stores-postgres llama-parse openai-whisper pylti1p3 python-multipart python-jose[cryptography] python-dotenv llama-index-llms-gemini llama-index-embeddings-gemini
    ```
 
 4. **Configure your Environment Variables:**
    Create a `.env` file in the `backend` folder (you can copy `.env.example`):
    ```env
    GOOGLE_API_KEY=your_actual_gemini_api_key_here
+   PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5433/crag_db
    ```
 
 5. **Start the Development Server:**
@@ -51,7 +61,7 @@ The backend handles the RAG ingestion, querying, and LLM processing.
 
 ---
 
-## 2. Running the Frontend (React + Vite)
+## 3. Running the Frontend (React + Vite)
 
 The frontend provides a test-bed UI to upload documents (`.txt`, `.md`) to a specific Tenant/Module ID and query them.
 
